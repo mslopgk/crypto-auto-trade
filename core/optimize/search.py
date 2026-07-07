@@ -181,9 +181,18 @@ def evaluate_task(task: dict) -> dict:
 def build_tasks(spec: SearchSpec) -> list[dict]:
     """Enumerate all (strategy, params, symbol, timeframe) tasks for a spec."""
     classes = _spec_strategies(spec.strategies)
+    # TIMEFRAMES is only a *recommended* set (see strategies/base.py). When the
+    # caller names strategies explicitly, honor the requested timeframes as-is;
+    # only the default (all-searchable) sweep restricts to each strategy's
+    # recommended TIMEFRAMES. Without this, an explicit request like
+    # strategies=['ema_cross'], timeframes=['1h'] silently yields zero combos.
+    explicit = spec.strategies is not None
     tasks: list[dict] = []
     for name, cls in classes.items():
-        tfs = [tf for tf in spec.timeframes if tf in cls.TIMEFRAMES]
+        if explicit:
+            tfs = list(spec.timeframes)
+        else:
+            tfs = [tf for tf in spec.timeframes if tf in cls.TIMEFRAMES]
         if not tfs:
             log.info("skip %s: none of %s in its TIMEFRAMES", name, spec.timeframes)
             continue

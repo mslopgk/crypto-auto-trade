@@ -261,7 +261,11 @@ def run_walkforward(spec: WalkForwardSpec, n_workers: int | None = None,
 
     is_cagrs = [f["is_metrics"].get("cagr", np.nan) for f in folds]
     mean_is_cagr = float(np.nanmean(np.asarray(is_cagrs, dtype=np.float64)))
-    if np.isfinite(mean_is_cagr) and abs(mean_is_cagr) > 1e-9:
+    # WFE = OOS / IS annualized return is only meaningful when IS is profitable
+    # (brief §2.3: >=0.5 accept). A non-positive IS denominator is undefined:
+    # a negative/negative ratio would masquerade as a "strong" WFE for a system
+    # that in fact lost money both in- and out-of-sample.
+    if np.isfinite(mean_is_cagr) and mean_is_cagr > 1e-9:
         wfe = float(stitched_metrics["cagr"] / mean_is_cagr)
     else:
         wfe = float("nan")

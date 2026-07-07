@@ -374,8 +374,12 @@ class LiveEngine:
             return
         if self._risk is not None:
             rv = self._realized_vol(df)
-            budget = float(self._risk.size_order(
-                equity, price, self._stop_distance(df, price), rv))
+            # RiskManager.size_order wants the stop distance as a FRACTION of
+            # price (equity * risk_pct / stop_frac); _stop_distance returns an
+            # absolute price distance, so convert before handing it over.
+            stop_dist = self._stop_distance(df, price)
+            stop_frac = stop_dist / price if price > 0.0 else 0.0
+            budget = float(self._risk.size_order(equity, price, stop_frac, rv))
         else:
             budget = equity
         if size_frac is not None:
