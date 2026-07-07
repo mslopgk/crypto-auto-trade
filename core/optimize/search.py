@@ -44,6 +44,14 @@ class SearchSpec:
     max_combos_per_strategy: int = 200        # random subsample (seeded) if grid larger
     since: str = "2019-01-01"
     until: str | None = None
+    # Optional hard-trim window bounds applied AFTER until/holdout: [start, end).
+    start: str | None = None
+    end: str | None = None
+    # Optional score cutoff: bars before ``score_start`` are still backtested
+    # (indicator warmup) but excluded from the scored metrics (research brief
+    # §2.2 — "fetch warmup + slice it off before scoring"). Unlike ``start`` this
+    # keeps the warmup prefix loaded rather than trimming it away.
+    score_start: str | None = None
     initial_capital: float = 10_000.0
     cost_multiplier: float = 1.0              # 2.0 = stress test at double costs
     holdout_days: int = 0
@@ -169,7 +177,21 @@ def evaluate_task(task: dict) -> dict:
         if len(df) < MIN_BARS:
             raise ValueError(f"only {len(df)} bars in window")
         result = _run_combo(df, task)
-        row.update(result.metrics)
+        score_start = task.get("score_start")
+        if score_start:
+            # Warmup prefix was backtested so indicators enter the scored window
+            # warm; slice it off and score only [score_start, end) — symmetric
+            # with the walk-forward OOS path (research brief §2.2/§2.3).
+            from core.backtest.metrics import compute_metrics
+            ss = _ts(score_start)
+            eq = result.equity[result.equity.index >= ss]
+            trades = result.trades[result.trades["exit_time"] >= ss].reset_index(drop=True)
+            if len(eq) < 2:
+                raise ValueError(f"only {len(eq)} scored bars after warmup slice")
+            metrics = compute_metrics(eq, trades, timeframe=task["timeframe"])
+        else:
+            metrics = result.metrics
+        row.update(metrics)
         row["error"] = None
     except Exception as e:
         row["error"] = f"{type(e).__name__}: {e}"
@@ -208,6 +230,9 @@ def build_tasks(spec: SearchSpec) -> list[dict]:
                         "params": json.dumps(combo, sort_keys=True),
                         "since": spec.since,
                         "until": spec.until,
+                        "start": spec.start,
+                        "end": spec.end,
+                        "score_start": spec.score_start,
                         "holdout_days": spec.holdout_days,
                         "initial_capital": spec.initial_capital,
                         "cost_multiplier": spec.cost_multiplier,

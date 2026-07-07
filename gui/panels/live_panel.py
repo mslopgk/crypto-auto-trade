@@ -155,8 +155,12 @@ class LivePanel(QWidget):
         self._stop_btn = QPushButton("정지")
         self._stop_btn.clicked.connect(self._stop)
         self._stop_btn.setEnabled(False)
+        self._rearm_btn = QPushButton("리스크 재가동")
+        self._rearm_btn.clicked.connect(self._re_arm)
+        self._rearm_btn.setEnabled(False)
         btns.addWidget(self._start_btn)
         btns.addWidget(self._stop_btn)
+        btns.addWidget(self._rearm_btn)
         v.addLayout(btns)
         v.addStretch(1)
 
@@ -351,7 +355,13 @@ class LivePanel(QWidget):
             self._controller.stop()
         self._start_btn.setEnabled(True)
         self._stop_btn.setEnabled(False)
+        self._rearm_btn.setEnabled(False)
         self._set_config_enabled(True)
+
+    def _re_arm(self) -> None:
+        """Clear a latched hard halt (halted_mdd/halted_daily) via the engine."""
+        if self._controller is not None:
+            self._controller.re_arm()
 
     def _set_config_enabled(self, on: bool) -> None:
         for w in (self._exchange, self._symbol, self._timeframe,
@@ -373,6 +383,8 @@ class LivePanel(QWidget):
         color = _STATUS_COLOR.get(status, COLORS["text"])
         self._lamp.setStyleSheet(f"color: {color}; font-size: 20px;")
         self._status_lbl.setText(_STATUS_KO.get(status, status))
+        # manual re-arm is only meaningful while a hard halt is latched
+        self._rearm_btn.setEnabled(status in ("halted_mdd", "halted_daily"))
         if status in ("stopped", "error"):
             self._start_btn.setEnabled(True)
             self._stop_btn.setEnabled(status != "stopped")

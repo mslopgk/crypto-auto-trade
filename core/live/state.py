@@ -39,6 +39,7 @@ class LiveState:
     trade_log: list[dict] = field(default_factory=list)
     started_at: float | None = None   # unix seconds
     last_bar_ts: int | None = None    # candle open time, ms
+    risk_snapshot: dict | None = None  # RiskManager.status() latch (peak, halts)
 
     # -- mutation helpers (enforce caps) --------------------------------------
     def record_equity(self, ts_ms: int, equity: float) -> None:
@@ -60,6 +61,7 @@ class LiveState:
             "trade_log": self.trade_log,
             "started_at": self.started_at,
             "last_bar_ts": self.last_bar_ts,
+            "risk_snapshot": self.risk_snapshot,
         }
 
     @classmethod
@@ -71,6 +73,7 @@ class LiveState:
             trade_log=list(d.get("trade_log") or []),
             started_at=d.get("started_at"),
             last_bar_ts=d.get("last_bar_ts"),
+            risk_snapshot=d.get("risk_snapshot"),
         )
 
     def save(self, path: str | Path) -> None:

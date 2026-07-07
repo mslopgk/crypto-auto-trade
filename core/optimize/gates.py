@@ -101,7 +101,13 @@ def grid_from_results(df: pd.DataFrame) -> dict[str, list]:
 
 
 def _is_one_step_neighbor(p: dict, q: dict, space: dict[str, list]) -> bool:
-    """True if q differs from p by exactly one grid step in exactly one param."""
+    """True if q differs from p by exactly one grid step in exactly one param.
+
+    This is the *immediate* (radius-1, single-axis) neighborhood used to build
+    the plateau-median score — deliberately narrower than the brief's §2.4
+    ±2-step / all-axes perturbation robustness check (see plateau_score), which
+    is a separate, stricter alarm.
+    """
     if set(p) != set(q):
         return False
     diffs = 0
@@ -151,6 +157,14 @@ def select_plateau_center(results_df: pd.DataFrame, strategy: str, symbol: str,
     Each candidate is scored by the median of {its own metric} U {metrics of
     all one-grid-step neighbors}; the highest neighborhood-median wins. The
     returned row gains a ``plateau_metric`` field with that score.
+
+    A candidate needs at least ``MIN_NEIGHBORS`` real (present, unfiltered)
+    one-step neighbors to be eligible — otherwise a fragile lone spike adjacent
+    to a filtered/unsampled region (whose neighborhood collapses to {self} and
+    thus scores at its raw peak) could win over a genuinely supported plateau
+    (research brief §2.4: never pick a lone parameter peak). If the whole grid
+    is too sparse for any candidate to clear the floor, fall back to the raw
+    peak metric.
     """
     sub = results_df[(results_df["strategy"] == strategy)
                      & (results_df["symbol"] == symbol)
@@ -166,13 +180,21 @@ def select_plateau_center(results_df: pd.DataFrame, strategy: str, symbol: str,
     params_list = [_params_of(row) for _, row in sub.iterrows()]
     values = sub[metric].to_numpy(dtype=np.float64)
 
-    scores = np.empty(len(sub))
+    MIN_NEIGHBORS = 2  # research brief §2.4: never pick a lone peak
+    scores = np.full(len(sub), -np.inf)
+    n_present = np.zeros(len(sub), dtype=int)
     for i, p in enumerate(params_list):
         neighborhood = [values[i]]
         for j, q in enumerate(params_list):
             if j != i and _is_one_step_neighbor(p, q, space):
                 neighborhood.append(values[j])
-        scores[i] = float(np.median(neighborhood))
+        n_present[i] = len(neighborhood) - 1
+        if n_present[i] >= MIN_NEIGHBORS:
+            scores[i] = float(np.median(neighborhood))
+    if not np.isfinite(scores).any():
+        # Sparse/tiny grid: no candidate has enough real neighbors to judge
+        # robustness — fall back to the raw peak metric.
+        scores = values.copy()
     best_i = int(np.argmax(scores))
     row = sub.iloc[best_i].copy()
     row["plateau_metric"] = float(scores[best_i])

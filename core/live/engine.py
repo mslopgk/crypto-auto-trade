@@ -182,20 +182,48 @@ class LiveEngine:
         risk = self._risk
         if risk is not None and hasattr(risk, "re_arm"):
             risk.re_arm()
+            if hasattr(risk, "status"):
+                self._state.risk_snapshot = risk.status()  # clear latch on disk
         self._halt_day = None
         if self.status in ("halted_daily", "halted_mdd"):
             self._set_status("running")
             self._log("risk halt manually re-armed")
 
+    def _restore_status(self) -> None:
+        """Set the startup status from a persisted risk latch.
+
+        A hard MDD kill (and, until the next UTC-day rollover, a daily lock)
+        must survive a process restart: resume in the halted status so trading
+        stays gated until :meth:`re_arm` (MDD) or the day rolls over (daily),
+        rather than unconditionally re-arming to 'running'.
+        """
+        snap = self._state.risk_snapshot
+        if snap and snap.get("halted_mdd"):
+            self._set_status("halted_mdd")
+            self._log("restored HARD DRAWDOWN HALT from persisted state "
+                      "(manual re-arm required before trading resumes)")
+        elif snap and snap.get("halted_daily"):
+            self._set_status("halted_daily")
+            day = snap.get("day")
+            if day is not None:
+                from datetime import date as _date
+                self._halt_day = _date.fromisoformat(day) if isinstance(day, str) else day
+            self._log("restored daily loss halt from persisted state "
+                      "(auto-clears on the next UTC day)")
+        else:
+            self._set_status("running")
+
     # ------------------------------------------------------------------- main
     async def _main(self) -> None:
         assert self._async_stop is not None
-        self._set_status("running")
         self._log(f"starting: {self._exchange_id} {self._symbol} {self._timeframe} "
                   f"strategy={self._strategy.describe()}")
+        self._load_state()
+        # restore the risk halt latch BEFORE arming 'running': a persisted MDD
+        # kill must survive the restart and keep trading gated until re_arm()
+        self._restore_status()
         if self._state.started_at is None:
             self._state.started_at = time.time()
-        self._load_state()
         self._reconcile_position()
         if self._bootstrap:
             await self._bootstrap_history()
@@ -249,6 +277,9 @@ class LiveEngine:
             self._last_price = price
             if self._state.position is not None:
                 self._peak_price = max(self._peak_price, float(bar["h"]))
+                # snapshot the trailing-stop high-water mark so a restart with
+                # an open long restores the true post-entry peak (not entry)
+                self._state.position["peak_price"] = self._peak_price
             self._fire(self._callbacks.on_bar, bar)
 
             ts = pd.Timestamp(ts_ms, unit="ms", tz="UTC")
@@ -330,6 +361,10 @@ class LiveEngine:
             self._exit_position(reason="halt_mdd")
         elif action == "soft_dd":
             self._log("soft drawdown brake active (risk halved)")
+        # persist the ladder latch (peak, day-start baseline, halt flags) so a
+        # restart resumes the SAME ladder instead of rebasing to current equity
+        if hasattr(risk, "status"):
+            self._state.risk_snapshot = risk.status()
 
     def _make_risk(self, initial_equity: float):
         try:
@@ -337,7 +372,15 @@ class LiveEngine:
         except ImportError:
             self._log("core.risk unavailable; running WITHOUT risk overlay")
             return None
-        return RiskManager(self._risk_limits, initial_equity)
+        risk = RiskManager(self._risk_limits, initial_equity)
+        snap = self._state.risk_snapshot
+        if snap:
+            risk.restore(snap)
+            self._log(
+                f"restored risk overlay (peak={snap.get('peak')}, "
+                f"halted_mdd={snap.get('halted_mdd')}, "
+                f"halted_daily={snap.get('halted_daily')})")
+        return risk
 
     # ---------------------------------------------------------------- position
     def _protective_stop_hit(self, df: pd.DataFrame, price: float) -> bool:
@@ -395,6 +438,7 @@ class LiveEngine:
             "entry_price": fill.price,
             "entry_time": fill.timestamp,
             "stance": 1,
+            "peak_price": fill.price,
         }
         self._peak_price = fill.price
         self._state.realized_pnl -= fill.fee
@@ -477,7 +521,9 @@ class LiveEngine:
             self._state.position = None
             self._fire(self._callbacks.on_position, None)
         else:
-            self._peak_price = float(pos["entry_price"])
+            # restore the true post-entry high-water mark; fall back to entry
+            # only for legacy states persisted before peak_price was tracked
+            self._peak_price = float(pos.get("peak_price", pos["entry_price"]))
 
     async def _bootstrap_history(self) -> None:
         loop = asyncio.get_running_loop()
@@ -490,8 +536,16 @@ class LiveEngine:
 
     def _bootstrap_sync(self) -> None:
         from core.data import fetcher
+        from core.constants import TIMEFRAME_MINUTES
+        # bound the fetch to the warmup window — an unbounded load_ohlcv on an
+        # uncached (symbol, timeframe) would download the full listing history
+        # (minutes-long hang on 1m bars) before the engine could start
+        tf_min = TIMEFRAME_MINUTES[self._timeframe]
+        need = (self._buf.maxlen or self._warmup_bars) + 10
+        since = (pd.Timestamp.now(tz="UTC")
+                 - pd.Timedelta(minutes=tf_min * need)).strftime("%Y-%m-%d")
         df = fetcher.load_ohlcv(self._exchange_id, self._symbol, self._timeframe,
-                                refresh=True)
+                                since=since, refresh=True)
         df = df.tail(self._buf.maxlen or self._warmup_bars)
         if df.empty:
             self._log("bootstrap returned no history")

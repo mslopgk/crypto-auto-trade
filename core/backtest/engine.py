@@ -323,16 +323,19 @@ def run_backtest(df: pd.DataFrame, stance, config: BacktestConfig | None = None,
     notional = np.abs(units) * e_px
     with np.errstate(divide="ignore", invalid="ignore"):
         ret_pct = np.where(notional > 0, pnl / notional, 0.0)
+    # NB: fancy-indexing with an empty int array preserves the (tz-aware) index
+    # dtype — never substitute a naive DatetimeIndex([]) here or empty trade
+    # frames become incomparable with tz-aware timestamps under pandas 3.
     trades = pd.DataFrame({
-        "entry_time": idx[e_i] if len(e_i) else pd.DatetimeIndex([]),
-        "exit_time": idx[x_i] if len(x_i) else pd.DatetimeIndex([]),
-        "direction": np.where(dirs > 0, "long", "short") if len(dirs) else [],
+        "entry_time": idx[e_i],
+        "exit_time": idx[x_i],
+        "direction": np.where(dirs > 0, "long", "short"),
         "entry_price": e_px,
         "exit_price": x_px,
         "units": units,
         "pnl": pnl,
         "ret_pct": ret_pct,
-        "bars_held": (x_i - e_i) if len(e_i) else [],
+        "bars_held": x_i - e_i,
         "exit_reason": [EXIT_REASONS[int(r)] for r in reason],
     })
 

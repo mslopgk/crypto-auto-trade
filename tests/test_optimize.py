@@ -7,6 +7,7 @@ OOS-with-IS-warmup evaluation and OOS equity stitching.
 """
 from __future__ import annotations
 
+import json
 import shutil
 
 import numpy as np
@@ -14,7 +15,9 @@ import pandas as pd
 import pytest
 
 from core.data.fetcher import cache_path
-from core.optimize.search import SearchSpec, run_search, build_tasks
+from core.optimize.gates import select_plateau_center
+from core.optimize.search import (SearchSpec, build_tasks, evaluate_task,
+                                   run_search)
 from core.optimize.walkforward import WalkForwardSpec, run_walkforward
 
 
@@ -96,3 +99,52 @@ def test_run_walkforward_micro(testopt_data):
     assert np.isfinite(eq.to_numpy()).all()
     assert eq.index.is_monotonic_increasing
     assert np.isfinite(res.stitched_metrics["sharpe"])
+
+
+# ------------------------------------------------- score-window (warmup slice)
+
+def test_score_start_excludes_warmup_from_metrics(testopt_data):
+    """A task with ``score_start`` must load the earlier bars for indicator
+    warmup but grade ONLY the [score_start, end) slice — so its metric window
+    (years) and trade count reflect the scored slice, not the full window."""
+    base = {
+        "exchange": "binance", "symbol": testopt_data, "timeframe": "1h",
+        "strategy": "ema_cross",
+        "params": json.dumps({"fast": 9, "slow": 21, "regime_filter": 0,
+                              "trail_atr_mult": 0.0}, sort_keys=True),
+        "since": "2019-01-01",
+    }
+    full = evaluate_task(dict(base))
+    # ~120 days of warmup precede score_start; only the tail (~46 days) is scored
+    scored = evaluate_task({**base, "score_start": "2021-05-01T00:00:00+00:00"})
+
+    assert full["error"] is None, full["error"]
+    assert scored["error"] is None, scored["error"]
+    # the scored window is strictly shorter than the full window
+    assert scored["years"] < full["years"]
+    assert full["years"] > 2.0 * scored["years"]
+    # warmup-period trades are excluded from the scored count
+    assert scored["n_trades"] < full["n_trades"]
+
+
+# --------------------------------------------------- plateau lone-peak guard
+
+def test_plateau_center_rejects_lone_peak():
+    """An isolated spike whose one-step neighbors are absent/filtered must NOT
+    win over a genuinely supported plateau (research brief §2.4)."""
+    # 1-param grid; fast=40 is a fragile lone spike (sharpe 5.0) with < 2 present
+    # neighbors, while 15/20/25 form a supported plateau (~1.0).
+    rows = []
+    for fast, sharpe in [(10, 0.5), (15, 1.0), (20, 1.1), (25, 1.0), (40, 5.0)]:
+        rows.append({
+            "strategy": "ema_cross", "symbol": "X/USDT", "timeframe": "1d",
+            "params": json.dumps({"fast": fast}), "error": None, "sharpe": sharpe,
+            "n_trades": 50,
+        })
+    df = pd.DataFrame(rows)
+    pick = select_plateau_center(df, "ema_cross", "X/USDT", "1d", metric="sharpe")
+    picked_fast = json.loads(pick["params"])["fast"]
+
+    assert picked_fast != 40, "lone spike must not win the plateau selection"
+    assert picked_fast in (15, 20, 25), "should pick a supported plateau member"
+    assert pick["plateau_metric"] < 5.0

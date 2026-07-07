@@ -15,6 +15,7 @@ All quantities follow ccxt semantics: market **buys** are specified by quote
 from __future__ import annotations
 
 import logging
+import math
 import random
 import threading
 import time
@@ -174,7 +175,10 @@ class PaperBroker(Broker):
     def get_last_price(self, symbol: str) -> float:
         if self._price_source is None:
             raise BrokerError("PaperBroker has no price_source configured")
-        return float(self._price_source(symbol))
+        px = self._price_source(symbol)
+        if px is None or not math.isfinite(px) or px <= 0:
+            raise BrokerError(f"PaperBroker has no price yet for {symbol}")
+        return float(px)
 
     def close(self) -> None:
         pass
@@ -244,7 +248,7 @@ class CcxtBroker(Broker):
                 return fn()
             except ccxt.AuthenticationError as e:
                 raise BrokerAuthError(str(e)) from e
-            except ccxt.RateLimitExceeded as e:
+            except (ccxt.RateLimitExceeded, ccxt.DDoSProtection) as e:
                 if attempt == tries - 1:
                     raise
                 log.warning("rate limited (%s); pausing %.0fs", e, _RATE_LIMIT_PAUSE_S)
@@ -404,7 +408,7 @@ class CcxtBroker(Broker):
                     if attempt == _MAX_ORDER_TRIES:
                         raise BrokerError(
                             f"order timed out and not found after reconcile: {e}") from e
-                except ccxt.RateLimitExceeded as e:
+                except (ccxt.RateLimitExceeded, ccxt.DDoSProtection) as e:
                     if attempt == _MAX_ORDER_TRIES:
                         raise BrokerError(f"rate limited placing order: {e}") from e
                     log.warning("rate limited (%s); pausing %.0fs", e, _RATE_LIMIT_PAUSE_S)

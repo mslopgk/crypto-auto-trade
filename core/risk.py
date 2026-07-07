@@ -151,6 +151,7 @@ class RiskManager:
             return {
                 "equity": self._equity,
                 "peak": self._peak,
+                "day": self._day.isoformat() if self._day is not None else None,
                 "day_start_equity": self._day_start_equity,
                 "drawdown": self._drawdown(),
                 "daily_loss": self._daily_loss(),
@@ -159,6 +160,31 @@ class RiskManager:
                 "halted_daily": self._halted_daily,
                 "halted_mdd": self._halted_mdd,
             }
+
+    def restore(self, snapshot: dict) -> None:
+        """Re-seed latched ladder state from a :meth:`status` snapshot.
+
+        Used on live-engine restart so the drawdown / daily ladders resume the
+        SAME peak and day-start baseline (and any latched hard halt) instead of
+        rebasing to the — already drawn-down — current equity. In particular a
+        latched MDD kill (``halted_mdd``) stays latched across the restart until
+        a human calls :meth:`re_arm`. Missing keys leave the corresponding
+        constructor-seeded value untouched.
+        """
+        with self._lock:
+            if snapshot.get("equity") is not None:
+                self._equity = float(snapshot["equity"])
+            if snapshot.get("peak") is not None:
+                self._peak = float(snapshot["peak"])
+            if snapshot.get("day_start_equity") is not None:
+                self._day_start_equity = float(snapshot["day_start_equity"])
+            day = snapshot.get("day")
+            if day is not None:
+                self._day = date.fromisoformat(day) if isinstance(day, str) else day
+            self._soft_dd = bool(snapshot.get("soft_dd", self._soft_dd))
+            self._soft_daily = bool(snapshot.get("soft_daily", self._soft_daily))
+            self._halted_daily = bool(snapshot.get("halted_daily", self._halted_daily))
+            self._halted_mdd = bool(snapshot.get("halted_mdd", self._halted_mdd))
 
     # -- internals (call with lock held) --------------------------------------
     def _drawdown(self) -> float:

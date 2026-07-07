@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from core.backtest.metrics import compute_metrics
-from core.constants import RESULTS_DIR
+from core.constants import DAYS_PER_YEAR, RESULTS_DIR, periods_per_year
 from core.optimize.gates import select_plateau_center
 from core.optimize.search import (MIN_BARS, _apply_window, _load_cached,
                                   _run_combo, evaluate_task, param_grid,
@@ -32,6 +32,13 @@ log = logging.getLogger(__name__)
 
 #: minimum surviving IS candidates for plateau-center selection (else raw best)
 MIN_PLATEAU_ROWS = 5
+
+#: bars of indicator warmup prepended to each IS window before scoring, so the
+#: IS grid enters its scored window warm — symmetric with the OOS path, which
+#: uses the full IS window as warmup (research brief §2.3, ~5x the longest
+#: indicator period, e.g. 1000 bars covers EMA200). Where insufficient prior
+#: data exists (earliest folds), _apply_window simply clips to what is available.
+IS_WARMUP_BARS = 1000
 
 
 @dataclass
@@ -162,12 +169,20 @@ def run_walkforward(spec: WalkForwardSpec, n_workers: int | None = None,
     log.info("walk-forward: %d folds x %d combos", len(windows), len(combos))
 
     # -- IS grid over all folds (tag = fold index) --
+    # Prepend a warmup prefix to each IS window and score only [is_start, is_end)
+    # so indicators are warm on entry — symmetric with the OOS backtest, which
+    # already runs on IS+OOS bars and scores only the OOS tail. Without this the
+    # IS grid cold-starts inside its scored window, deflating IS CAGR (the WFE
+    # denominator) and starving low-frequency strategies of trades.
+    bar_days = DAYS_PER_YEAR / periods_per_year(spec.timeframe)
+    warmup = pd.Timedelta(days=IS_WARMUP_BARS * bar_days)
     tasks: list[dict] = []
     for fold_i, (is_start, is_end, _oos_end) in enumerate(windows):
         for combo in combos:
             task = _base_task(spec, json.dumps(combo, sort_keys=True))
-            task["start"] = is_start.isoformat()
+            task["start"] = (is_start - warmup).isoformat()
             task["end"] = is_end.isoformat()
+            task["score_start"] = is_start.isoformat()
             task["tag"] = fold_i
             tasks.append(task)
 
@@ -247,12 +262,18 @@ def run_walkforward(spec: WalkForwardSpec, n_workers: int | None = None,
         raise ValueError("all walk-forward folds failed — check data / strategy")
 
     # -- stitch OOS equity, rebasing each segment onto the previous end --
+    # OOS segments are non-overlapping: fold i covers [is_end_i, oos_end_i) and
+    # fold i+1 starts at oos_end_i (window_df uses `< oos_end`). Each segment's
+    # first bar merely re-anchors to the previous segment's ending level; keeping
+    # it for folds after the first would inject a spurious flat (zero-return) bar
+    # at the boundary and double-count the handoff, so drop that anchor bar. The
+    # real first OOS return of each fold is preserved relative to ``base``.
     base = float(spec.initial_capital)
     rebased: list[pd.Series] = []
-    for seg in oos_segments:
+    for i, seg in enumerate(oos_segments):
         seg = seg / float(seg.iloc[0]) * base
-        rebased.append(seg)
         base = float(seg.iloc[-1])
+        rebased.append(seg if i == 0 else seg.iloc[1:])
     stitched = pd.concat(rebased).sort_index()
     stitched = stitched[~stitched.index.duplicated(keep="first")]
     all_oos_trades = pd.concat(oos_trades_parts, ignore_index=True) \
