@@ -45,6 +45,14 @@ class Strategy(ABC):
         Warmup region must be 0. stance[i] may only depend on rows <= i.
         """
 
+    def generate_size_frac(self, df: pd.DataFrame) -> np.ndarray | None:
+        """Optional per-bar fraction of equity (0..1) to deploy on entries.
+
+        Used for conviction/vol scaling (e.g. multi-lookback agreement).
+        Same no-lookahead rule applies. Return None to use config.size_frac.
+        """
+        return None
+
     # -- helpers -------------------------------------------------------------
     def engine_params(self) -> dict:
         """Extract reserved engine-level exit params present in self.params."""

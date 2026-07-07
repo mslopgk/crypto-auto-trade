@@ -28,10 +28,26 @@ def periods_per_year(timeframe: str) -> float:
 
 
 # Default per-side costs (fraction, not %). Conservative taker assumptions.
+# Research-derived tiers (docs/research-brief.md §2.1). Acceptance gates re-test at 2x.
 DEFAULT_COSTS = {
-    "binance": {"fee": 0.0010, "slippage": 0.0005},
-    "upbit": {"fee": 0.0005, "slippage": 0.0010},
+    "binance": {"fee": 0.00075, "slippage": 0.0005},   # BTC/ETH tier w/ BNB discount
+    "upbit": {"fee": 0.0005, "slippage": 0.0010},      # KRW majors
 }
+
+# per-side slippage overrides by liquidity tier
+SLIPPAGE_TIERS = {
+    "binance": {"major": 0.0005, "alt": 0.0010},        # majors: BTC, ETH
+    "upbit": {"major": 0.0010, "alt": 0.0025},
+}
+MAJOR_SYMBOLS = {"BTC/USDT", "ETH/USDT", "BTC/KRW", "ETH/KRW"}
+
+
+def cost_profile(exchange_id: str, symbol: str) -> dict:
+    """Per-side fee/slippage for a symbol; conservative tiering."""
+    fee = DEFAULT_COSTS.get(exchange_id, {"fee": 0.001})["fee"]
+    tiers = SLIPPAGE_TIERS.get(exchange_id, {"major": 0.0005, "alt": 0.0010})
+    slip = tiers["major"] if symbol in MAJOR_SYMBOLS else tiers["alt"]
+    return {"fee": fee, "slippage": slip}
 
 DEFAULT_EXCHANGE = "binance"
 
