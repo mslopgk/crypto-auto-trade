@@ -117,3 +117,136 @@ def btc_risk_on(btc_daily_close, sma_period: int = 150) -> bool:
         return False
     s = sma(c, sma_period)
     return bool(c[-1] > s[-1])
+
+
+# ---------------------------------------------------------------------------
+# Round-2 candidate #5: realized-vol term-structure regime overlay.
+#
+# A pure-OHLCV overlay that reads the *ratio* of short-window to long-window
+# realized (Parkinson) volatility. When short-run vol expands past its own
+# longer-run baseline the market is entering a vol-expansion / crash leg
+# (RISK_OFF); when short-run vol compresses well below baseline the tape is
+# quiet/ranging (RANGING). This is intended to be judged on incremental
+# left-tail (MDD/Calmar) reduction on top of the existing per-strategy vol
+# targeting, NOT as a standalone alpha (research brief round2 #5).
+# ---------------------------------------------------------------------------
+
+NORMAL: int = 0
+RISK_OFF: int = 1
+RANGING: int = 2
+
+# Parkinson (1980) range-estimator constant: var = 1/(4 ln2) * E[ln(H/L)^2].
+_PARKINSON_C = 1.0 / (4.0 * np.log(2.0))
+
+
+def parkinson_vol(high, low, period: int) -> np.ndarray:
+    """Annualized Parkinson high-low volatility over a trailing ``period`` window.
+
+    Parkinson (1980): ``var = 1/(4 ln2) * mean(ln(H/L)**2)`` over the window.
+    Uses only the intra-bar high-low range (no close-to-close overnight gaps),
+    which makes it a lower-variance vol estimate than close-close std.
+
+    DAILY basis: pass DAILY high/low arrays; the result is annualized with
+    ``sqrt(365)`` (the annualization is irrelevant to the short/long *ratio*
+    used by :func:`rv_ratio_state`, but keeps the standalone value a real vol).
+
+    No lookahead: ``value[i]`` uses rows ``<= i`` only (trailing window); the
+    first ``period-1`` entries are NaN (warmup).
+    """
+    h = np.asarray(high, dtype=np.float64)
+    l = np.asarray(low, dtype=np.float64)
+    n = len(h)
+    out = np.full(n, np.nan)
+    if n < period or period < 1:
+        return out
+    with np.errstate(divide="ignore", invalid="ignore"):
+        hl2 = np.log(h / l) ** 2
+    hl2 = np.where(np.isfinite(hl2), hl2, np.nan)
+    from numpy.lib.stride_tricks import sliding_window_view
+    w = sliding_window_view(hl2, period)
+    with np.errstate(invalid="ignore"):
+        mean_hl2 = np.nanmean(w, axis=1)
+    var = _PARKINSON_C * mean_hl2
+    out[period - 1:] = np.sqrt(np.maximum(var, 0.0)) * np.sqrt(_DAYS_PER_YEAR)
+    return out
+
+
+def rv_ratio_state(df: pd.DataFrame, short_d: int = 10, long_d: int = 30,
+                   risk_off: float = 1.25, ranging: float = 0.8,
+                   ema_smooth: int = 3, hysteresis: float = 0.05) -> np.ndarray:
+    """Realized-vol term-structure regime on a DAILY OHLCV frame.
+
+    Returns an ``int8`` array aligned to ``df`` with values in
+    {``NORMAL``=0, ``RISK_OFF``=1, ``RANGING``=2}.
+
+    ``ratio = parkinson_vol(short_d) / parkinson_vol(long_d)``, then
+    EMA-smoothed with ``span=ema_smooth`` to damp single-day spikes. A short
+    window that is running hot relative to its own longer baseline
+    (``ratio >= risk_off``) is RISK_OFF; a compressed short window
+    (``ratio <= ranging``) is RANGING; in-between is NORMAL.
+
+    Whipsaw control (brief §3.1): a ``hysteresis`` margin in ratio units keeps
+    an extreme state latched until the ratio retraces ``hysteresis`` past the
+    trigger, and a 2-day dwell requires two consecutive agreeing days before
+    any state change commits — this prevents flag flip-flop and the next-open
+    slippage churn it would cause.
+
+    No lookahead: ``state[i]`` uses daily bars ``<= i`` only.
+
+    PREVIOUS-COMPLETED-DAY semantics (important): ``state[i]`` is decided at the
+    CLOSE of daily bar ``i`` and is only actionable from the NEXT day's open
+    onward. A caller mapping this onto bar ``i`` itself, or onto intraday bars
+    of day ``i``, MUST shift the daily state forward by one day first. See
+    ``scripts/rv_overlay_check.py`` for the canonical alignment (state of day
+    ``D`` governs trading on day ``D+1``).
+    """
+    if long_d <= short_d:
+        raise ValueError("long_d must exceed short_d")
+    h = df["high"].to_numpy(dtype=np.float64)
+    l = df["low"].to_numpy(dtype=np.float64)
+    n = len(h)
+    short_pv = parkinson_vol(h, l, short_d)
+    long_pv = parkinson_vol(h, l, long_d)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio = np.where(long_pv > 0, short_pv / long_pv, np.nan)
+
+    # EMA-smooth only the valid (post-warmup, contiguous) region.
+    sm = np.full(n, np.nan)
+    valid = np.isfinite(ratio)
+    if valid.any():
+        sm[valid] = (pd.Series(ratio[valid])
+                     .ewm(span=max(1, int(ema_smooth)), adjust=False)
+                     .mean().to_numpy())
+
+    hi_off = risk_off - hysteresis   # must retrace below this to leave RISK_OFF
+    lo_off = ranging + hysteresis    # must rise above this to leave RANGING
+    out = np.zeros(n, dtype=np.int8)
+    state = NORMAL
+    pend, pend_n = -1, 0
+    for i in range(n):
+        r = sm[i]
+        if np.isnan(r):
+            out[i] = NORMAL
+            continue
+        if r >= risk_off:
+            cand = RISK_OFF
+        elif r <= ranging:
+            cand = RANGING
+        elif state == RISK_OFF and r >= hi_off:
+            cand = RISK_OFF            # hysteresis latch
+        elif state == RANGING and r <= lo_off:
+            cand = RANGING             # hysteresis latch
+        else:
+            cand = NORMAL
+        if cand == state:
+            pend, pend_n = -1, 0
+        else:
+            if cand == pend:
+                pend_n += 1
+            else:
+                pend, pend_n = cand, 1
+            if pend_n >= 2:            # 2-day dwell
+                state = cand
+                pend, pend_n = -1, 0
+        out[i] = state
+    return out

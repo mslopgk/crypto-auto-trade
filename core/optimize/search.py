@@ -146,6 +146,13 @@ def _run_combo(df: pd.DataFrame, task: dict):
     params = json.loads(task["params"])
     if "timeframe" in cls.DEFAULTS:
         params.setdefault("timeframe", task["timeframe"])
+    # Strategies that key off the traded market (e.g. funding sleeve) declare
+    # 'symbol'/'exchange' in DEFAULTS; inject them the same way as timeframe.
+    # Backward compatible: strategies without these keys are unaffected.
+    if "symbol" in cls.DEFAULTS:
+        params.setdefault("symbol", task["symbol"])
+    if "exchange" in cls.DEFAULTS:
+        params.setdefault("exchange", task["exchange"])
     strategy = cls(**params)
     costs = cost_profile(task["exchange"], task["symbol"])
     mult = float(task.get("cost_multiplier", 1.0))

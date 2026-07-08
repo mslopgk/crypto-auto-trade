@@ -31,5 +31,5 @@ def _ensure_loaded() -> None:
     global _loaded
     if _loaded:
         return
-    from core.strategies import trend, meanrev, volbreakout, ensemble  # noqa: F401
+    from core.strategies import trend, meanrev, volbreakout, ensemble, funding  # noqa: F401
     _loaded = True
