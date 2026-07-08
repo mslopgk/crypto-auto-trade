@@ -16,6 +16,8 @@ def run_strategy_backtest(df: pd.DataFrame, strategy: Strategy, timeframe: str,
     costs = cost_profile(exchange_id, symbol)
     kwargs: dict = dict(costs)
     kwargs.update(strategy.engine_params())
+    if getattr(strategy, "SUPPORTS_SHORT", False):
+        kwargs["allow_short"] = True
     if overrides:
         kwargs.update(overrides)
     config = BacktestConfig(**kwargs)

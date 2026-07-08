@@ -219,3 +219,59 @@ class RSIMomentum(Strategy):
         entries = r > float(self.params["enter_lvl"])
         exits = r < float(self.params["exit_lvl"])
         return hold_stance(entries, exits)
+
+
+@register
+class TsmomLS(Strategy):
+    """Round-3 candidate: long/short vol-scaled TSMOM (perp-sleeve simulation).
+
+    Long leg identical to :class:`TSMOM`. Short leg mirrors it: short while
+    close < close ``lookback_days`` ago AND close < EMA(ema_period); in
+    ``short_mode='gated'`` the short additionally requires close < EMA of
+    ``gate_days`` days (short only in confirmed downtrends). Funding credit
+    earned by real perp shorts is deliberately NOT modeled — evaluation is
+    conservative for the short leg (shorts receive funding ~92% of the time).
+    """
+
+    NAME = "tsmom_ls"
+    TIMEFRAMES = ("1d",)
+    SEARCHABLE = True
+    SUPPORTS_SHORT = True
+    PARAM_SPACE = {
+        "lookback_days": [14, 21, 28, 42, 56],
+        "target_vol": [0.10, 0.15, 0.20],
+        "short_mode": ["gated", "symmetric"],
+    }
+    DEFAULTS = {"lookback_days": 21, "target_vol": 0.15, "timeframe": "1d",
+                "ema_period": 50, "vol_days": 30, "short_mode": "gated",
+                "gate_days": 200}
+
+    def generate_signals(self, df: pd.DataFrame) -> np.ndarray:
+        c = df["close"].to_numpy(dtype=np.float64)
+        n = len(c)
+        bpd = bars_per_day(self.params["timeframe"])
+        lb = int(self.params["lookback_days"]) * bpd
+        if lb + 1 > n:
+            return np.zeros(n)
+        c_lag = np.full(n, np.nan)
+        c_lag[lb:] = c[:-lb]
+        fast = ema(c, int(self.params["ema_period"]))
+        long_ok = (c > c_lag) & (c > fast)
+        short_ok = (c < c_lag) & (c < fast)
+        if self.params["short_mode"] == "gated":
+            gate = ema(c, int(self.params["gate_days"]) * bpd)
+            short_ok &= np.where(np.isnan(gate), False, c < gate)
+        stance = np.zeros(n)
+        stance[long_ok] = 1.0
+        stance[short_ok & ~long_ok] = -1.0
+        return stance
+
+    def generate_size_frac(self, df: pd.DataFrame) -> np.ndarray | None:
+        c = df["close"].to_numpy(dtype=np.float64)
+        tf = self.params["timeframe"]
+        bpd = bars_per_day(tf)
+        rv = realized_vol(c, int(self.params["vol_days"]) * bpd, ppy=periods_per_year(tf))
+        tv = float(self.params["target_vol"])
+        with np.errstate(divide="ignore", invalid="ignore"):
+            frac = np.where(np.isfinite(rv) & (rv > 0.0), np.clip(tv / rv, 0.0, 1.0), 0.0)
+        return shift1(frac, fill=0.0)
