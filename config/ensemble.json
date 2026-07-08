@@ -1,5 +1,5 @@
 {
-  "created": "2026-07-07T21:05:48.312146+00:00",
+  "created": "2026-07-08T07:11:25.951106+00:00",
   "methodology": "round1 grid search -> gates -> rolling WFA (365/90d, plateau-center) -> inverse-vol weights w/ corr penalty, cap 35% -> holdout (last 180d) evaluated once via scripts/eval_holdout.py",
   "holdout_days": 180,
   "risk_defaults": {
@@ -18,23 +18,23 @@
       "timeframe": "1d",
       "strategy": "tsmom",
       "params": {
-        "lookback_days": 14,
-        "target_vol": 0.1
+        "lookback_days": 42,
+        "target_vol": 0.15
       },
       "recent_is": {
-        "is_sharpe": 1.0003989490284126,
-        "is_cagr": 0.07816555555694138,
-        "is_mdd": 0.07666315844536153,
-        "is_trades": 34
+        "is_sharpe": -5.2945099605276325e-06,
+        "is_cagr": -0.005293957122269433,
+        "is_mdd": 0.07782980053880084,
+        "is_trades": 13
       },
       "wfa": {
-        "oos_sharpe": 1.5217597319355718,
-        "oos_cagr": 0.2936122246029065,
-        "oos_mdd": 0.18762169414600605,
-        "wfe": 0.8660675461331548,
-        "pct_profitable_folds": 0.5833333333333334
+        "oos_sharpe": 1.6570190877526143,
+        "oos_cagr": 0.3403953970688043,
+        "oos_mdd": 0.1328906618440735,
+        "wfe": 0.691354911190914,
+        "pct_profitable_folds": 0.6666666666666666
       },
-      "weight": 0.0767
+      "weight": 0.1027
     },
     {
       "id": "binance_ETH_USDT_1d_tsmom",
@@ -47,44 +47,19 @@
         "target_vol": 0.15
       },
       "recent_is": {
-        "is_sharpe": 0.8285283216769244,
-        "is_cagr": 0.09233682875971416,
-        "is_mdd": 0.20993696483258228,
-        "is_trades": 29
+        "is_sharpe": 1.2824824496007,
+        "is_cagr": 0.14689511674183064,
+        "is_mdd": 0.06401504548322423,
+        "is_trades": 14
       },
       "wfa": {
-        "oos_sharpe": 0.9664312052069925,
-        "oos_cagr": 0.16190401556950018,
-        "oos_mdd": 0.19796175395083748,
-        "wfe": 0.7875819844089714,
+        "oos_sharpe": 1.196685635856479,
+        "oos_cagr": 0.209505197507444,
+        "oos_mdd": 0.16536182237856523,
+        "wfe": 0.9043437111150341,
         "pct_profitable_folds": 0.5833333333333334
       },
-      "weight": 0.1214
-    },
-    {
-      "id": "binance_SOL_USDT_1d_tsmom",
-      "exchange": "binance",
-      "symbol": "SOL/USDT",
-      "timeframe": "1d",
-      "strategy": "tsmom",
-      "params": {
-        "lookback_days": 21,
-        "target_vol": 0.2
-      },
-      "recent_is": {
-        "is_sharpe": 0.8178951337610215,
-        "is_cagr": 0.13468206621173828,
-        "is_mdd": 0.1336789044809621,
-        "is_trades": 30
-      },
-      "wfa": {
-        "oos_sharpe": 1.1520541343413901,
-        "oos_cagr": 0.27888090882303596,
-        "oos_mdd": 0.2367200621260367,
-        "wfe": 0.5265411265182985,
-        "pct_profitable_folds": 0.4117647058823529
-      },
-      "weight": 0.087
+      "weight": 0.1124
     },
     {
       "id": "binance_ADA_USDT_1d_tsmom",
@@ -93,50 +68,23 @@
       "timeframe": "1d",
       "strategy": "tsmom",
       "params": {
-        "lookback_days": 14,
-        "target_vol": 0.2
+        "lookback_days": 42,
+        "target_vol": 0.15
       },
       "recent_is": {
-        "is_sharpe": 0.9999139166080252,
-        "is_cagr": 0.20557079235701914,
-        "is_mdd": 0.15799413840803944,
-        "is_trades": 25
+        "is_sharpe": -0.5125695256580018,
+        "is_cagr": -0.04468050978730387,
+        "is_mdd": 0.06861917502981119,
+        "is_trades": 13
       },
       "wfa": {
-        "oos_sharpe": 1.4387599584534114,
-        "oos_cagr": 0.3317847403663843,
-        "oos_mdd": 0.25347652202738,
-        "wfe": 1.0091965579944298,
+        "oos_sharpe": 1.2411795120634224,
+        "oos_cagr": 0.26353668570430644,
+        "oos_mdd": 0.2733923817222381,
+        "wfe": 0.6071728697614112,
         "pct_profitable_folds": 0.5
       },
-      "weight": 0.1924
-    },
-    {
-      "id": "binance_BTC_USDT_1d_ema_cross",
-      "exchange": "binance",
-      "symbol": "BTC/USDT",
-      "timeframe": "1d",
-      "strategy": "ema_cross",
-      "params": {
-        "fast": 9,
-        "regime_filter": 0,
-        "slow": 55,
-        "trail_atr_mult": 0.0
-      },
-      "recent_is": {
-        "is_sharpe": 0.9538061969438653,
-        "is_cagr": 0.3060365753748113,
-        "is_mdd": 0.3510625557708261,
-        "is_trades": 8
-      },
-      "wfa": {
-        "oos_sharpe": 1.2643294160957088,
-        "oos_cagr": 0.5410349152501845,
-        "oos_mdd": 0.30837828367498954,
-        "wfe": 1.0650723171856633,
-        "pct_profitable_folds": 0.5
-      },
-      "weight": 0.0339
+      "weight": 0.1874
     },
     {
       "id": "upbit_BTC_KRW_1d_tsmom",
@@ -145,23 +93,23 @@
       "timeframe": "1d",
       "strategy": "tsmom",
       "params": {
-        "lookback_days": 21,
-        "target_vol": 0.15
+        "lookback_days": 14,
+        "target_vol": 0.2
       },
       "recent_is": {
-        "is_sharpe": 1.674257560348576,
-        "is_cagr": 0.24556524422422688,
-        "is_mdd": 0.09757537672421879,
-        "is_trades": 26
+        "is_sharpe": 0.5928143237663321,
+        "is_cagr": 0.06649849563352306,
+        "is_mdd": 0.09318493627931346,
+        "is_trades": 18
       },
       "wfa": {
-        "oos_sharpe": 1.517634284647297,
-        "oos_cagr": 0.33167845844533406,
-        "oos_mdd": 0.23954827551094626,
-        "wfe": 0.6475678066149867,
+        "oos_sharpe": 1.9380953574580853,
+        "oos_cagr": 0.41636540913580977,
+        "oos_mdd": 0.15508511066316677,
+        "wfe": 0.6868136206042169,
         "pct_profitable_folds": 0.625
       },
-      "weight": 0.0682
+      "weight": 0.1019
     },
     {
       "id": "upbit_ETH_KRW_1d_tsmom",
@@ -174,19 +122,19 @@
         "target_vol": 0.15
       },
       "recent_is": {
-        "is_sharpe": 1.200061376727746,
-        "is_cagr": 0.14572914036437923,
-        "is_mdd": 0.11263827612750721,
-        "is_trades": 30
+        "is_sharpe": 1.1227619496297414,
+        "is_cagr": 0.1319073161477653,
+        "is_mdd": 0.08649081423460347,
+        "is_trades": 16
       },
       "wfa": {
-        "oos_sharpe": 1.1997325609505987,
-        "oos_cagr": 0.22006889088952164,
-        "oos_mdd": 0.1613307389252936,
-        "wfe": 0.7798131741641816,
-        "pct_profitable_folds": 0.6666666666666666
+        "oos_sharpe": 1.1788934617519993,
+        "oos_cagr": 0.21381218629953747,
+        "oos_mdd": 0.2361384800873465,
+        "wfe": 0.5277571543430982,
+        "pct_profitable_folds": 0.625
       },
-      "weight": 0.1154
+      "weight": 0.1082
     },
     {
       "id": "upbit_SOL_KRW_1d_tsmom",
@@ -199,19 +147,19 @@
         "target_vol": 0.15
       },
       "recent_is": {
-        "is_sharpe": 1.0629362126563762,
-        "is_cagr": 0.1422025763324204,
-        "is_mdd": 0.09661252688894961,
-        "is_trades": 21
+        "is_sharpe": 0.18965855094744247,
+        "is_cagr": 0.01471628954171278,
+        "is_mdd": 0.06673858600482485,
+        "is_trades": 11
       },
       "wfa": {
-        "oos_sharpe": 1.1257339225380127,
-        "oos_cagr": 0.259032226756881,
-        "oos_mdd": 0.20504748224466007,
-        "wfe": 0.5867868634612975,
-        "pct_profitable_folds": 0.5384615384615384
+        "oos_sharpe": 1.4156897559176516,
+        "oos_cagr": 0.31403972858088536,
+        "oos_mdd": 0.1396682191285884,
+        "wfe": 1.200732638761615,
+        "pct_profitable_folds": 0.6153846153846154
       },
-      "weight": 0.091
+      "weight": 0.1852
     },
     {
       "id": "upbit_BTC_KRW_4h_ema_cross",
@@ -220,25 +168,25 @@
       "timeframe": "4h",
       "strategy": "ema_cross",
       "params": {
-        "fast": 9,
+        "fast": 12,
         "regime_filter": 200,
         "slow": 21,
         "trail_atr_mult": 0.0
       },
       "recent_is": {
-        "is_sharpe": 1.9696273442783339,
-        "is_cagr": 0.5422744197783733,
-        "is_mdd": 0.17885231078233366,
-        "is_trades": 71
+        "is_sharpe": 0.8292759910565337,
+        "is_cagr": 0.14143439336791652,
+        "is_mdd": 0.18826004608432478,
+        "is_trades": 31
       },
       "wfa": {
-        "oos_sharpe": 1.7597290509409511,
-        "oos_cagr": 0.6978328616533016,
-        "oos_mdd": 0.44230537357887956,
-        "wfe": 0.5871636088035309,
-        "pct_profitable_folds": 0.7083333333333334
+        "oos_sharpe": 1.959461045067272,
+        "oos_cagr": 0.818424083211531,
+        "oos_mdd": 0.4052563991148348,
+        "wfe": 0.6730465727550156,
+        "pct_profitable_folds": 0.7916666666666666
       },
-      "weight": 0.1245
+      "weight": 0.1165
     },
     {
       "id": "upbit_ETH_KRW_4h_ema_cross",
@@ -247,146 +195,106 @@
       "timeframe": "4h",
       "strategy": "ema_cross",
       "params": {
-        "fast": 12,
+        "fast": 9,
         "regime_filter": 100,
         "slow": 55,
         "trail_atr_mult": 0.0
       },
       "recent_is": {
-        "is_sharpe": 1.6908411907132521,
-        "is_cagr": 0.7026499947081934,
-        "is_mdd": 0.3017875038869784,
-        "is_trades": 63
+        "is_sharpe": 1.1967409212943165,
+        "is_cagr": 0.4309880711094669,
+        "is_mdd": 0.22050008824653067,
+        "is_trades": 31
       },
       "wfa": {
-        "oos_sharpe": 1.776942681211278,
-        "oos_cagr": 1.042931608231279,
-        "oos_mdd": 0.37999622696631064,
-        "wfe": 0.6079313155495778,
+        "oos_sharpe": 1.878951767144412,
+        "oos_cagr": 1.113534334887556,
+        "oos_mdd": 0.3489567274889679,
+        "wfe": 0.660529815468226,
         "pct_profitable_folds": 0.7916666666666666
       },
-      "weight": 0.0895
+      "weight": 0.0857
     }
   ],
   "correlation_matrix": {
     "binance_BTC_USDT_1d_tsmom": {
       "binance_BTC_USDT_1d_tsmom": 1.0,
-      "binance_ETH_USDT_1d_tsmom": 0.512,
-      "binance_SOL_USDT_1d_tsmom": 0.382,
-      "binance_ADA_USDT_1d_tsmom": 0.376,
-      "binance_BTC_USDT_1d_ema_cross": 0.731,
-      "upbit_BTC_KRW_1d_tsmom": 0.823,
-      "upbit_ETH_KRW_1d_tsmom": 0.507,
-      "upbit_SOL_KRW_1d_tsmom": 0.443,
-      "upbit_BTC_KRW_4h_ema_cross": 0.283,
-      "upbit_ETH_KRW_4h_ema_cross": 0.172
+      "binance_ETH_USDT_1d_tsmom": 0.508,
+      "binance_ADA_USDT_1d_tsmom": 0.361,
+      "upbit_BTC_KRW_1d_tsmom": 0.877,
+      "upbit_ETH_KRW_1d_tsmom": 0.489,
+      "upbit_SOL_KRW_1d_tsmom": 0.433,
+      "upbit_BTC_KRW_4h_ema_cross": 0.273,
+      "upbit_ETH_KRW_4h_ema_cross": 0.164
     },
     "binance_ETH_USDT_1d_tsmom": {
-      "binance_BTC_USDT_1d_tsmom": 0.512,
+      "binance_BTC_USDT_1d_tsmom": 0.508,
       "binance_ETH_USDT_1d_tsmom": 1.0,
-      "binance_SOL_USDT_1d_tsmom": 0.304,
-      "binance_ADA_USDT_1d_tsmom": 0.415,
-      "binance_BTC_USDT_1d_ema_cross": 0.523,
-      "upbit_BTC_KRW_1d_tsmom": 0.497,
-      "upbit_ETH_KRW_1d_tsmom": 0.894,
-      "upbit_SOL_KRW_1d_tsmom": 0.318,
-      "upbit_BTC_KRW_4h_ema_cross": 0.197,
-      "upbit_ETH_KRW_4h_ema_cross": 0.291
-    },
-    "binance_SOL_USDT_1d_tsmom": {
-      "binance_BTC_USDT_1d_tsmom": 0.382,
-      "binance_ETH_USDT_1d_tsmom": 0.304,
-      "binance_SOL_USDT_1d_tsmom": 1.0,
-      "binance_ADA_USDT_1d_tsmom": 0.298,
-      "binance_BTC_USDT_1d_ema_cross": 0.359,
-      "upbit_BTC_KRW_1d_tsmom": 0.332,
-      "upbit_ETH_KRW_1d_tsmom": 0.302,
-      "upbit_SOL_KRW_1d_tsmom": 0.921,
-      "upbit_BTC_KRW_4h_ema_cross": 0.14,
-      "upbit_ETH_KRW_4h_ema_cross": 0.047
+      "binance_ADA_USDT_1d_tsmom": 0.425,
+      "upbit_BTC_KRW_1d_tsmom": 0.445,
+      "upbit_ETH_KRW_1d_tsmom": 0.847,
+      "upbit_SOL_KRW_1d_tsmom": 0.283,
+      "upbit_BTC_KRW_4h_ema_cross": 0.18,
+      "upbit_ETH_KRW_4h_ema_cross": 0.289
     },
     "binance_ADA_USDT_1d_tsmom": {
-      "binance_BTC_USDT_1d_tsmom": 0.376,
-      "binance_ETH_USDT_1d_tsmom": 0.415,
-      "binance_SOL_USDT_1d_tsmom": 0.298,
+      "binance_BTC_USDT_1d_tsmom": 0.361,
+      "binance_ETH_USDT_1d_tsmom": 0.425,
       "binance_ADA_USDT_1d_tsmom": 1.0,
-      "binance_BTC_USDT_1d_ema_cross": 0.354,
-      "upbit_BTC_KRW_1d_tsmom": 0.317,
-      "upbit_ETH_KRW_1d_tsmom": 0.36,
-      "upbit_SOL_KRW_1d_tsmom": 0.337,
-      "upbit_BTC_KRW_4h_ema_cross": 0.106,
-      "upbit_ETH_KRW_4h_ema_cross": 0.165
-    },
-    "binance_BTC_USDT_1d_ema_cross": {
-      "binance_BTC_USDT_1d_tsmom": 0.731,
-      "binance_ETH_USDT_1d_tsmom": 0.523,
-      "binance_SOL_USDT_1d_tsmom": 0.359,
-      "binance_ADA_USDT_1d_tsmom": 0.354,
-      "binance_BTC_USDT_1d_ema_cross": 1.0,
-      "upbit_BTC_KRW_1d_tsmom": 0.735,
-      "upbit_ETH_KRW_1d_tsmom": 0.509,
-      "upbit_SOL_KRW_1d_tsmom": 0.397,
-      "upbit_BTC_KRW_4h_ema_cross": 0.276,
-      "upbit_ETH_KRW_4h_ema_cross": 0.143
+      "upbit_BTC_KRW_1d_tsmom": 0.315,
+      "upbit_ETH_KRW_1d_tsmom": 0.385,
+      "upbit_SOL_KRW_1d_tsmom": 0.25,
+      "upbit_BTC_KRW_4h_ema_cross": 0.116,
+      "upbit_ETH_KRW_4h_ema_cross": 0.167
     },
     "upbit_BTC_KRW_1d_tsmom": {
-      "binance_BTC_USDT_1d_tsmom": 0.823,
-      "binance_ETH_USDT_1d_tsmom": 0.497,
-      "binance_SOL_USDT_1d_tsmom": 0.332,
-      "binance_ADA_USDT_1d_tsmom": 0.317,
-      "binance_BTC_USDT_1d_ema_cross": 0.735,
+      "binance_BTC_USDT_1d_tsmom": 0.877,
+      "binance_ETH_USDT_1d_tsmom": 0.445,
+      "binance_ADA_USDT_1d_tsmom": 0.315,
       "upbit_BTC_KRW_1d_tsmom": 1.0,
-      "upbit_ETH_KRW_1d_tsmom": 0.537,
-      "upbit_SOL_KRW_1d_tsmom": 0.389,
-      "upbit_BTC_KRW_4h_ema_cross": 0.318,
-      "upbit_ETH_KRW_4h_ema_cross": 0.189
+      "upbit_ETH_KRW_1d_tsmom": 0.514,
+      "upbit_SOL_KRW_1d_tsmom": 0.427,
+      "upbit_BTC_KRW_4h_ema_cross": 0.3,
+      "upbit_ETH_KRW_4h_ema_cross": 0.169
     },
     "upbit_ETH_KRW_1d_tsmom": {
-      "binance_BTC_USDT_1d_tsmom": 0.507,
-      "binance_ETH_USDT_1d_tsmom": 0.894,
-      "binance_SOL_USDT_1d_tsmom": 0.302,
-      "binance_ADA_USDT_1d_tsmom": 0.36,
-      "binance_BTC_USDT_1d_ema_cross": 0.509,
-      "upbit_BTC_KRW_1d_tsmom": 0.537,
+      "binance_BTC_USDT_1d_tsmom": 0.489,
+      "binance_ETH_USDT_1d_tsmom": 0.847,
+      "binance_ADA_USDT_1d_tsmom": 0.385,
+      "upbit_BTC_KRW_1d_tsmom": 0.514,
       "upbit_ETH_KRW_1d_tsmom": 1.0,
-      "upbit_SOL_KRW_1d_tsmom": 0.322,
-      "upbit_BTC_KRW_4h_ema_cross": 0.219,
-      "upbit_ETH_KRW_4h_ema_cross": 0.301
+      "upbit_SOL_KRW_1d_tsmom": 0.31,
+      "upbit_BTC_KRW_4h_ema_cross": 0.222,
+      "upbit_ETH_KRW_4h_ema_cross": 0.317
     },
     "upbit_SOL_KRW_1d_tsmom": {
-      "binance_BTC_USDT_1d_tsmom": 0.443,
-      "binance_ETH_USDT_1d_tsmom": 0.318,
-      "binance_SOL_USDT_1d_tsmom": 0.921,
-      "binance_ADA_USDT_1d_tsmom": 0.337,
-      "binance_BTC_USDT_1d_ema_cross": 0.397,
-      "upbit_BTC_KRW_1d_tsmom": 0.389,
-      "upbit_ETH_KRW_1d_tsmom": 0.322,
+      "binance_BTC_USDT_1d_tsmom": 0.433,
+      "binance_ETH_USDT_1d_tsmom": 0.283,
+      "binance_ADA_USDT_1d_tsmom": 0.25,
+      "upbit_BTC_KRW_1d_tsmom": 0.427,
+      "upbit_ETH_KRW_1d_tsmom": 0.31,
       "upbit_SOL_KRW_1d_tsmom": 1.0,
-      "upbit_BTC_KRW_4h_ema_cross": 0.158,
-      "upbit_ETH_KRW_4h_ema_cross": 0.072
+      "upbit_BTC_KRW_4h_ema_cross": 0.175,
+      "upbit_ETH_KRW_4h_ema_cross": 0.058
     },
     "upbit_BTC_KRW_4h_ema_cross": {
-      "binance_BTC_USDT_1d_tsmom": 0.283,
-      "binance_ETH_USDT_1d_tsmom": 0.197,
-      "binance_SOL_USDT_1d_tsmom": 0.14,
-      "binance_ADA_USDT_1d_tsmom": 0.106,
-      "binance_BTC_USDT_1d_ema_cross": 0.276,
-      "upbit_BTC_KRW_1d_tsmom": 0.318,
-      "upbit_ETH_KRW_1d_tsmom": 0.219,
-      "upbit_SOL_KRW_1d_tsmom": 0.158,
+      "binance_BTC_USDT_1d_tsmom": 0.273,
+      "binance_ETH_USDT_1d_tsmom": 0.18,
+      "binance_ADA_USDT_1d_tsmom": 0.116,
+      "upbit_BTC_KRW_1d_tsmom": 0.3,
+      "upbit_ETH_KRW_1d_tsmom": 0.222,
+      "upbit_SOL_KRW_1d_tsmom": 0.175,
       "upbit_BTC_KRW_4h_ema_cross": 1.0,
-      "upbit_ETH_KRW_4h_ema_cross": 0.55
+      "upbit_ETH_KRW_4h_ema_cross": 0.555
     },
     "upbit_ETH_KRW_4h_ema_cross": {
-      "binance_BTC_USDT_1d_tsmom": 0.172,
-      "binance_ETH_USDT_1d_tsmom": 0.291,
-      "binance_SOL_USDT_1d_tsmom": 0.047,
-      "binance_ADA_USDT_1d_tsmom": 0.165,
-      "binance_BTC_USDT_1d_ema_cross": 0.143,
-      "upbit_BTC_KRW_1d_tsmom": 0.189,
-      "upbit_ETH_KRW_1d_tsmom": 0.301,
-      "upbit_SOL_KRW_1d_tsmom": 0.072,
-      "upbit_BTC_KRW_4h_ema_cross": 0.55,
+      "binance_BTC_USDT_1d_tsmom": 0.164,
+      "binance_ETH_USDT_1d_tsmom": 0.289,
+      "binance_ADA_USDT_1d_tsmom": 0.167,
+      "upbit_BTC_KRW_1d_tsmom": 0.169,
+      "upbit_ETH_KRW_1d_tsmom": 0.317,
+      "upbit_SOL_KRW_1d_tsmom": 0.058,
+      "upbit_BTC_KRW_4h_ema_cross": 0.555,
       "upbit_ETH_KRW_4h_ema_cross": 1.0
     }
   }

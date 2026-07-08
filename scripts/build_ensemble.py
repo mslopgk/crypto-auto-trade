@@ -36,12 +36,12 @@ DEPLOY_IS_DAYS = 365
 WEIGHT_CAP = 0.35
 
 # WFA survivors: OOS sharpe >= ~0.9, WFE >= 0.5, stitched OOS MDD acceptable.
+# (Corrected-methodology run 2026-07-08: binance SOL 1d tsmom dropped on
+# WFE 0.30; binance BTC 1d ema_cross dropped on OOS sharpe 0.64 / MDD 47%.)
 SURVIVORS = [
     ("binance", "BTC/USDT", "1d", "tsmom"),
     ("binance", "ETH/USDT", "1d", "tsmom"),
-    ("binance", "SOL/USDT", "1d", "tsmom"),
     ("binance", "ADA/USDT", "1d", "tsmom"),
-    ("binance", "BTC/USDT", "1d", "ema_cross"),
     ("upbit", "BTC/KRW", "1d", "tsmom"),
     ("upbit", "ETH/KRW", "1d", "tsmom"),
     ("upbit", "SOL/KRW", "1d", "tsmom"),
