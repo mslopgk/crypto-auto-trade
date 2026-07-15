@@ -46,7 +46,25 @@
 MDD도 개선 안 됨 — 2023~25 횡보/상승장의 숏 휩쏘가 베어 이득을 상쇄. 리서치 예측 그대로.
 `tsmom_ls`는 레지스트리에 남겨둠(선물 계정용 대안으로 유효, 샤프 ~1.0-1.4 독립 전략).
 
-## 수렴 (2026-07-09)
+## Round 4 (2026-07-10) — Claude 오리지널 로직 10종
+
+사용자 요청으로 문헌이 아닌 자체 구상 로직 10종을 설계·구현·검증 (core/strategies/round4_a~d.py,
+탐색 10,464 조합 → 게이트 1,064 → WFA 14셀).
+
+| 전략 | 아이디어 | 결과 |
+|---|---|---|
+| **vov_calm_trend** | 변동성의 변동성(2차 모멘트) 안정 구간에서만 추세 보유 | ✅ **앙상블 편입** (upbit BTC/ETH 4h) |
+| efficiency_momentum | 경로 품질(수익률/경로길이)로 깨끗한 추세 선별 | ⚠️ OOS 샤프 1.0~1.25지만 WFE<0.5 — 관찰 목록 |
+| wick_pressure | 캔들 꼬리 비대칭 매수압력 | ❌ WFA 탈락 |
+| trend_pullback | 추세 내 연속 음봉 눌림 매수 | ❌ WFA 탈락 |
+| volume_shock_pullback / compression_ladder / adaptive_weekday / vshape_recovery / funding_quality_breakout / vb_trail_hybrid | — | ❌ 게이트/탐색 단계 탈락 |
+
+**앙상블 v2 (10셀)**: 기존 8셀 + upbit BTC/KRW 4h vov(WFA 1.68/MDD 15.8%/WFE 0.70, 북 최대상관 0.66)
++ upbit ETH/KRW 4h vov(1.38/15.1%/0.50, 0.63). binance vov 셀들은 동일심볼 tsmom과 상관 0.70~0.75로
+중복 기각. 편입 판정은 WFA+상관 기준만 사용. 기록용 홀드아웃: -1.8%/MDD 4.0%
+(8셀 대비 개선, 시장 -39.2%; 신규 vov BTC 셀은 급락장에서 +2.8%).
+
+## 수렴 (2026-07-09, Round 4로 갱신)
 
 라운드 2·3 연속 무개선 → 루프 수렴. 현행 8셀 앙상블이 도전 2라운드(후보 6종 + WFA 11셀 추가
 검증)를 전부 방어했다. OHLCV+펀딩 데이터 범위에서 낮은 상관의 개선 후보는 소진 상태.

@@ -47,6 +47,11 @@ SURVIVORS = [
     ("upbit", "SOL/KRW", "1d", "tsmom"),
     ("upbit", "BTC/KRW", "4h", "ema_cross"),
     ("upbit", "ETH/KRW", "4h", "ema_cross"),
+    # Round-4 additions (2026-07-10): original vol-of-vol gated trend cells.
+    # WFA OOS 1.68/1.38, MDD ~15-16%, WFE 0.70/0.50; max corr vs book 0.66/0.63.
+    # Binance vov cells rejected: 0.70-0.75 corr vs same-symbol tsmom and weaker.
+    ("upbit", "BTC/KRW", "4h", "vov_calm_trend"),
+    ("upbit", "ETH/KRW", "4h", "vov_calm_trend"),
 ]
 
 
